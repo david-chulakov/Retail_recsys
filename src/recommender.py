@@ -19,7 +19,7 @@ class MainRecommender:
     """
 
     def __init__(self, data, weighting=True):
-
+        
         # Топ покупок каждого юзера
         self.top_purchases = data.groupby(['user_id', 'item_id'])['quantity'].count().reset_index()
         self.top_purchases.sort_values('quantity', ascending=False, inplace=True)
@@ -41,6 +41,7 @@ class MainRecommender:
 
         self.model = self.fit(self.user_item_matrix)
         self.own_recommender = self.fit_own_recommender(self.user_item_matrix)
+        
 
     @staticmethod
     def _prepare_matrix(data):
@@ -73,6 +74,7 @@ class MainRecommender:
         userid_to_id = dict(zip(userids, matrix_userids))
 
         return id_to_itemid, id_to_userid, itemid_to_id, userid_to_id
+    
 
     @staticmethod
     def fit_own_recommender(user_item_matrix):
@@ -135,16 +137,23 @@ class MainRecommender:
         res = self._extend_with_top_popular(res, N=N)
         assert len(res) == N, f'Количество рекомендаций != {N}'
         return res
+    
 
     def get_als_recommendations(self, user, N=5):
         """Рекомендации через стардартные библиотеки implicit"""
-
+        if user not in self.userid_to_id:
+            return self._extend_with_top_popular([], N=N)
+        
+        
         self._update_dict(user_id=user)
         return self._get_recommendations(user, model=self.model, N=N)
 
     def get_own_recommendations(self, user, N=5):
         """Рекомендуем товары среди тех, которые юзер уже купил"""
-
+        
+        if user not in self.userid_to_id:
+            return self._extend_with_top_popular([], N=N)
+        
         self._update_dict(user_id=user)
         return self._get_recommendations(user, model=self.own_recommender, N=N)
 
@@ -162,7 +171,10 @@ class MainRecommender:
 
     def get_similar_users_recommendation(self, user, N=5):
         """Рекомендуем топ-N товаров, среди купленных похожими юзерами"""
-
+        
+        if user not in self.userid_to_id:
+            return self._extend_with_top_popular([], N=N)
+        
         res = []
 
         # Находим топ-N похожих пользователей
